@@ -1,97 +1,12 @@
-#include "assert.h"
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #include <curses.h>
 
-#define MEM_COLS 4
-#define MEM_ROWS 6
-#define MEM_SIZE (MEM_COLS * MEM_ROWS)
-
-#define CMDLOG_SIZE 5
-#define CMD_SIZE 9
-
-#define MEMVAL_MAX 999
-#define MEMVAL_MIN -999
-
-// The largest decimal number representable in MEMADD_SIZE digits
-// Just to shut up sprintf about invalid formatting
-#define ADD_MAX 99
-
-#define MEMADD_SIZE 2
-#define MEMCLL_SIZE 5
-// 2 for the separators
-#define MEMBOX_COLS (MEMADD_SIZE + MEMCLL_SIZE + 2)
-#define MEMBOX_ADD_OFFSET (1 + MEMADD_SIZE)
-
-// Add two to each for dividers, 1 for the final divider
-#define MEMDISP_COLS (MEM_COLS * MEMBOX_COLS + 1)
-// Each data row has a divider, but 1 to cap the end
-#define MEMDISP_ROWS (MEM_ROWS * 2 + 1)
-
-// 3 separators + 2 character register names
-#define CPUDISP_COLS (5 + MEMCLL_SIZE)
-// 3 possible stages, 3 registers, 3 separators
-#define CPUDISP_ROWS 9
-
-// 2 Separators, 1 prompt, CMD_SIZE - 1 characters per command
-#define CONSOLE_COLS (2 + CMD_SIZE)
-// 2 separators, 1 prompt line, 5 in the log
-#define CONSOLE_ROWS (3 + CMDLOG_SIZE)
-
-#define DISPLAY_COLS (CONSOLE_COLS + MEMDISP_COLS)
-// We're making the assumption here other options aren't tweaked to make
-// MEMDISP_ROWS Shorter than CONSOLE_ROWS + CPUDISP_ROWS
-#define DISPLAY_ROWS (MEMDISP_ROWS)
-
-typedef struct {
-	int instruction;
-	int counter;
-	int reg_a;
-
-	// What step of the cycle the CPU is in
-	// 0 fetch instruction from memory at location counter
-	// 1 increment the counter
-	// 2 perform the instruction
-	int step;
-
-	int memory[MEM_SIZE];
-
-	// Our log can hold CMDLOG_SIZE commands, and each will be CMD_SIZE characters long (NUL included)
-	// cmdlog[0] is the oldest string, cmdlog[CMDLOG_SIZE - 1] the newest
-	char cmdlog[CMD_SIZE][CMDLOG_SIZE];
-	char cmd[CMD_SIZE];
-	// Index of the first NUL in cmd
-	// Just so we don't have to both searching for it every time we modify it.
-	int cmd_size;
-} computer_t;
-
-static int window_maxx(WINDOW *win)
-{
-	// I need to call the macro with a y, but I don't actually use it
-	int y;
-	(void)y;
-
-	int x;
-	getmaxyx(win, y, x);
-	return x;
-}
-
-static int window_maxy(WINDOW *win)
-{
-	// I need to call the macro with an x, but I don't actually use it
-	int x;
-	(void)x;
-
-	int y;
-	getmaxyx(win, y, x);
-	return y;
-}
-
-static bool inrange(int tested, int max, int min)
-{
-	return tested <= max && tested >= min;
-}
+#include "constants.h"
+#include "computer.h"
+#include "utility.h"
 
 static void draw_memory(WINDOW *win, const computer_t *computer)
 {
@@ -332,40 +247,9 @@ static void draw_console(WINDOW *win, const computer_t *computer)
 	wrefresh(win);
 }
 
-static void null_str(char *str, int size)
-{
-	for (int i = 0; i < size; ++i) {
-		str[i] = '\0';
-	}
-}
-
 int main()
 {
-	// Start the computer
-	computer_t *computer = malloc(sizeof(computer_t));
-
-	// Do some necessary initializiations
-	// Invalid data won't be displayed
-	computer->instruction = MEMVAL_MAX + 1;
-	computer->counter = MEMVAL_MAX + 1;
-	computer->reg_a = MEMVAL_MAX + 1;
-
-	// Always start on step 0
-	computer->step = 0;
-
-	// Fill our memory with invalid data (to prevent display of it)
-	for (int i = 0; i < MEM_SIZE; ++i) {
-		computer->memory[i] = MEMVAL_MAX + 1;
-	}
-
-	// Null out our command log
-	for (int i = 0; i < CMDLOG_SIZE; ++i) {
-		null_str(computer->cmdlog[i], CMD_SIZE);
-	}
-
-	// And out current command
-	null_str(computer->cmd, CMD_SIZE);
-	computer->cmd_size = 0;
+	computer_t *computer = start_computer();
 
 	// Startup all the curses jazz
 	WINDOW *main = initscr();
