@@ -75,8 +75,8 @@ void draw_memory(WINDOW *win, const computer_t *computer)
 
 	// Draw the addresses and memory
 	// We'll be using these for everything we print, allocate them once
-	char add_buf[MEMADD_SIZE + 1];
-	char mem_buff[MEMCLL_SIZE + 1];
+	char add_buf[40];
+	char mem_buff[40];
 	for (int y = 1; y < maxy - 1; y += 2) {
 		for (int x = 0; x < MEM_COLS; ++x) {
 			// We draw memory top to bottom, left to right
@@ -94,20 +94,26 @@ void draw_memory(WINDOW *win, const computer_t *computer)
 			if (idx > ADD_MAX) {
 				idx = ADD_MAX;
 			}
-			// I don't know how to make these have size dependent on a macro
-			static_assert(MEMADD_SIZE == 2,
-				      "update the format specifiers here!");
-			static_assert(MEMCLL_SIZE == 5,
-				      "update the format specifiers here!");
-			sprintf(add_buf, "%2d", idx);
-			sprintf(mem_buff, "%5d", memory);
+
+			// This is a valid value for memory, and it will format nicely
+			const bool memory_fits =
+				inrange(memory, MEMVAL_MAX, MEMVAL_MIN);
+
+			sprintf(add_buf, "%d", idx);
+			if (memory_fits) {
+				sprintf(mem_buff, "%d", memory);
+			}
+
+			// But because sprintf will still complain sometimes, take only the first SIZE + 1 characters from the string.
+			// (The characters to display the address, and NUL)
+			add_buf[MEMADD_SIZE] = '\0';
 
 			// Use addnstr to prevent values from leaking past their positions
 			// I know the format specifiers in sprintf should do the same
 			// I'm just being careful
 			mvwaddnstr(win, y, add_coord, add_buf, MEMADD_SIZE);
 			// Values > MEMVAL_MAX or < MEMVAL_MIN are invalid
-			if (inrange(memory, MEMVAL_MAX, MEMVAL_MIN)) {
+			if (memory_fits) {
 				mvwaddnstr(win, y, mem_coord, mem_buff,
 					   MEMCLL_SIZE);
 			}
