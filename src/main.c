@@ -20,6 +20,12 @@ int main()
 	start_color();
 	// We don't need to (or want to) display the cursor
 	curs_set(0);
+	// We don't want to wait for a newline, take input instantly
+	cbreak();
+	// And we'll write the output, curses doesn't need to
+	noecho();
+	// We'll use this later for the computer (not quite here), so let's keep it around
+	// nodelay(main, true);
 
 	// Check we've got a big enough window
 	const int term_x = window_maxx(main);
@@ -48,9 +54,12 @@ int main()
 	doupdate();
 
 	// Our main loop
-	chtype input = getch();
+	// int, because ERR is int
+	// We shouldn't be recieving ERR right now, but we might in the future.
+	int input = getch();
 	while (input != 'q') {
 		input = getch();
+		mvwaddch(main, term_y - 2, term_x - 2, input);
 	}
 
 	delwin(memwin);
