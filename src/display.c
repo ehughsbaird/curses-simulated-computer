@@ -248,3 +248,13 @@ void draw_console(WINDOW *win, const computer_t *computer)
 	// Finally, draw the window
 	wrefresh(win);
 }
+
+void draw_windows(WINDOW *memory, WINDOW *cpu, WINDOW *console,
+		  const computer_t *computer)
+{
+	draw_memory(memory, computer);
+	draw_cpu(cpu, computer);
+	draw_console(console, computer);
+
+	doupdate();
+}

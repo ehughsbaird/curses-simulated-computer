@@ -10,4 +10,7 @@ void draw_memory(WINDOW *win, const computer_t *computer);
 void draw_cpu(WINDOW *win, const computer_t *computer);
 void draw_console(WINDOW *win, const computer_t *computer);
 
+void draw_windows(WINDOW *memory, WINDOW *cpu, WINDOW *console,
+		  const computer_t *computer);
+
 #endif // COMP_DISPLAY_H

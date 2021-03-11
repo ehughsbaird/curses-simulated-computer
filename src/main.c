@@ -9,33 +9,18 @@
 #include "display.h"
 #include "utility.h"
 
+bool curses_init(WINDOW *main);
+
 int main()
 {
 	computer_t *computer = start_computer();
 
 	// Startup all the curses jazz
 	WINDOW *main = initscr();
-	keypad(main, true);
-	// Though we don't actually use it
-	start_color();
-	// We don't need to (or want to) display the cursor
-	curs_set(0);
-	// We don't want to wait for a newline, take input instantly
-	cbreak();
-	// And we'll write the output, curses doesn't need to
-	noecho();
-	// We'll use this later for the computer (not quite here), so let's keep it around
-	// nodelay(main, true);
 
-	// Check we've got a big enough window
-	const int term_x = window_maxx(main);
-	const int term_y = window_maxy(main);
-	if (term_x < DISPLAY_COLS || term_y < DISPLAY_ROWS) {
-		endwin();
+	bool gui_success = curses_init(main);
+	if (!gui_success) {
 		free(computer);
-		fprintf(stderr,
-			"Window is too small (x: %d, y: %d), want (x: %d, y: %d)\n",
-			term_x, term_y, DISPLAY_COLS, DISPLAY_ROWS);
 		return -1;
 	}
 
@@ -46,12 +31,7 @@ int main()
 	WINDOW *inpwin = subwin(main, CONSOLE_ROWS, CONSOLE_COLS, CPUDISP_ROWS,
 				MEMDISP_COLS);
 
-	wrefresh(main);
-	draw_memory(memwin, computer);
-	draw_cpu(cpuwin, computer);
-	draw_console(inpwin, computer);
-
-	doupdate();
+	draw_windows(memwin, cpuwin, inpwin, computer);
 
 	// Our main loop
 	// int, because ERR is int
@@ -71,12 +51,7 @@ int main()
 			++computer->cmd_size;
 		}
 
-		wrefresh(main);
-		draw_memory(memwin, computer);
-		draw_cpu(cpuwin, computer);
-		draw_console(inpwin, computer);
-
-		doupdate();
+		draw_windows(memwin, cpuwin, inpwin, computer);
 		input = getch();
 	}
 
@@ -87,4 +62,33 @@ int main()
 	endwin();
 	free(computer);
 	return 1;
+}
+
+bool curses_init(WINDOW *main)
+{
+	// We need to ensure there is input here
+	keypad(main, true);
+	// Though we don't actually use it
+	start_color();
+	// We don't need to (or want to) display the cursor
+	curs_set(0);
+	// We don't want to wait for a newline, take input instantly
+	cbreak();
+	// And we'll write the output, curses doesn't need to
+	noecho();
+	// We'll use this later for the computer (not quite here), so let's keep it around
+	// nodelay(main, true);
+
+	// Check we've got a big enough window
+	const int term_x = window_maxx(main);
+	const int term_y = window_maxy(main);
+	if (term_x < DISPLAY_COLS || term_y < DISPLAY_ROWS) {
+		endwin();
+		fprintf(stderr,
+			"Window is too small (x: %d, y: %d), want (x: %d, y: %d)\n",
+			term_x, term_y, DISPLAY_COLS, DISPLAY_ROWS);
+		return false;
+	}
+
+	return true;
 }
