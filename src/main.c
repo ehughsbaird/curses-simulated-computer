@@ -1,0 +1,417 @@
+#include "assert.h"
+#include <stdint.h>
+#include <stdlib.h>
+
+#include <curses.h>
+
+#define MEM_COLS 4
+#define MEM_ROWS 6
+#define MEM_SIZE (MEM_COLS * MEM_ROWS)
+
+#define CMDLOG_SIZE 5
+#define CMD_SIZE 9
+
+#define MEMVAL_MAX 999
+#define MEMVAL_MIN -999
+
+// The largest decimal number representable in MEMADD_SIZE digits
+// Just to shut up sprintf about invalid formatting
+#define ADD_MAX 99
+
+#define MEMADD_SIZE 2
+#define MEMCLL_SIZE 5
+// 2 for the separators
+#define MEMBOX_COLS (MEMADD_SIZE + MEMCLL_SIZE + 2)
+#define MEMBOX_ADD_OFFSET (1 + MEMADD_SIZE)
+
+// Add two to each for dividers, 1 for the final divider
+#define MEMDISP_COLS (MEM_COLS * MEMBOX_COLS + 1)
+// Each data row has a divider, but 1 to cap the end
+#define MEMDISP_ROWS (MEM_ROWS * 2 + 1)
+
+// 3 separators + 2 character register names
+#define CPUDISP_COLS (5 + MEMCLL_SIZE)
+// 3 possible stages, 3 registers, 3 separators
+#define CPUDISP_ROWS 9
+
+// 2 Separators, 1 prompt, CMD_SIZE - 1 characters per command
+#define CONSOLE_COLS (2 + CMD_SIZE)
+// 2 separators, 1 prompt line, 5 in the log
+#define CONSOLE_ROWS (3 + CMDLOG_SIZE)
+
+#define DISPLAY_COLS (CONSOLE_COLS + MEMDISP_COLS)
+// We're making the assumption here other options aren't tweaked to make
+// MEMDISP_ROWS Shorter than CONSOLE_ROWS + CPUDISP_ROWS
+#define DISPLAY_ROWS (MEMDISP_ROWS)
+
+typedef struct {
+	int instruction;
+	int counter;
+	int reg_a;
+
+	// What step of the cycle the CPU is in
+	// 0 fetch instruction from memory at location counter
+	// 1 increment the counter
+	// 2 perform the instruction
+	int step;
+
+	int memory[MEM_SIZE];
+
+	// Our log can hold CMDLOG_SIZE commands, and each will be CMD_SIZE characters long (NUL included)
+	// cmdlog[0] is the oldest string, cmdlog[CMDLOG_SIZE - 1] the newest
+	char cmdlog[CMD_SIZE][CMDLOG_SIZE];
+	char cmd[CMD_SIZE];
+	// Index of the first NUL in cmd
+	// Just so we don't have to both searching for it every time we modify it.
+	int cmd_size;
+} computer_t;
+
+static int window_maxx(WINDOW *win)
+{
+	// I need to call the macro with a y, but I don't actually use it
+	int y;
+	(void)y;
+
+	int x;
+	getmaxyx(win, y, x);
+	return x;
+}
+
+static int window_maxy(WINDOW *win)
+{
+	// I need to call the macro with an x, but I don't actually use it
+	int x;
+	(void)x;
+
+	int y;
+	getmaxyx(win, y, x);
+	return y;
+}
+
+static bool inrange(int tested, int max, int min)
+{
+	return tested <= max && tested >= min;
+}
+
+static void draw_memory(WINDOW *win, const computer_t *computer)
+{
+	// Clean up whatever is left from drawing this previously
+	werase(win);
+	// Draw a border around it
+	wborder(win, 0, 0, 0, 0, 0, 0, 0, 0);
+
+	/*
+	 * We draw lines at
+	 *     3     9 12    18 21    27 30
+	 *  |--|-----|--|-----|--|-----|--|-----|
+	 *  |ad|memry|ad|memry|ad|memry|ad|memry|
+	 * 2-------------------------------------
+	 *  |ad|memry|ad|memry|ad|memry|ad|memry|
+	 * 4-------------------------------------
+	 *  |ad|memry|ad|memry|ad|memry|ad|memry|
+	 * 6-------------------------------------
+	 *  |ad|memry|ad|memry|ad|memry|ad|memry|
+	 * 8-------------------------------------
+	 *  |ad|memry|ad|memry|ad|memry|ad|memry|
+	 *
+	 * So where x % 9 == 0 and x % 9 == 3
+	 * And y % 2 == 0
+	 *
+	 * Or, more generalized
+	 * where x % MEMBOX_COLS == 0 and x % MEMBOX_COLS == MEMBOX_ADD_OFFSET
+	 * and where y % 2 == 0
+	 */
+	const int maxx = window_maxx(win);
+	const int maxy = window_maxy(win);
+
+	// Layout the table
+	for (int y = 0; y < maxy; ++y) {
+		for (int x = 0; x < maxx; ++x) {
+			const bool yzero = y == 0;
+			const bool ymax = y == maxy - 1;
+			const bool xzero = x == 0;
+			const bool xmax = x == maxx - 1;
+			const bool draw_vline =
+				(x % MEMBOX_COLS == 0 ||
+				 x % MEMBOX_COLS == MEMBOX_ADD_OFFSET);
+			const bool draw_hline = y % 2 == 0;
+			const bool on_boundary = yzero || ymax || xzero || xmax;
+
+			if (!xzero && !xmax && yzero && draw_vline) {
+				// The first line, connect the lines we're drawing down to the top
+				mvwaddch(win, y, x, ACS_TTEE);
+			} else if (!xzero && !xmax && ymax && draw_vline) {
+				// Now, connect the lines we're drawing down to the bottom
+				mvwaddch(win, y, x, ACS_BTEE);
+			} else if (xzero && !(yzero || ymax) && draw_hline) {
+				// And connect the sides (from the left)
+				mvwaddch(win, y, x, ACS_LTEE);
+			} else if (xmax && !(yzero || ymax) && draw_hline) {
+				// And connect the side (from the right)
+				mvwaddch(win, y, x, ACS_RTEE);
+			} else if (!on_boundary && draw_hline && draw_vline) {
+				// Draw the in-between connectors
+				mvwaddch(win, y, x, ACS_PLUS);
+			} else if (!on_boundary && draw_vline) {
+				// Now, draw the vertical lines
+				mvwaddch(win, y, x, ACS_VLINE);
+			} else if (!on_boundary && draw_hline) {
+				// And the horizontal ones
+				mvwaddch(win, y, x, ACS_HLINE);
+			}
+		}
+	}
+
+	// Draw the addresses and memory
+	// We'll be using these for everything we print, allocate them once
+	char add_buf[MEMADD_SIZE + 1];
+	char mem_buff[MEMCLL_SIZE + 1];
+	for (int y = 1; y < maxy - 1; y += 2) {
+		for (int x = 0; x < MEM_COLS; ++x) {
+			// We draw memory top to bottom, left to right
+			// So 6x gives us the amount of cells in the columns before us
+			// And y / 2 will round down to the number of cells above us
+			int idx = MEM_ROWS * x + (y / 2);
+			// Each address starts MEMBOX_COLS apart from eachother, offset 1 from the edge
+			const int add_coord = MEMBOX_COLS * x + 1;
+			// Each cell starts MEMBOX_COLS apart from eachother, offset MEDADD_SIZE + 1 from the edge
+			const int mem_coord = MEMBOX_COLS * x + MEMADD_SIZE + 1;
+			const int memory = computer->memory[idx];
+
+			// Make sure sprintf doesn't complain about idx being too large
+			// (If its bigger, it won't fit in add_buf)
+			if (idx > ADD_MAX) {
+				idx = ADD_MAX;
+			}
+			// I don't know how to make these have size dependent on a macro
+			static_assert(MEMADD_SIZE == 2,
+				      "update the format specifiers here!");
+			static_assert(MEMCLL_SIZE == 5,
+				      "update the format specifiers here!");
+			sprintf(add_buf, "%2d", idx);
+			sprintf(mem_buff, "%5d", memory);
+
+			// Use addnstr to prevent values from leaking past their positions
+			// I know the format specifiers in sprintf should do the same
+			// I'm just being careful
+			mvwaddnstr(win, y, add_coord, add_buf, MEMADD_SIZE);
+			// Values > MEMVAL_MAX or < MEMVAL_MIN are invalid
+			if (inrange(memory, MEMVAL_MAX, MEMVAL_MIN)) {
+				mvwaddnstr(win, y, mem_coord, mem_buff,
+					   MEMCLL_SIZE);
+			}
+		}
+	}
+
+	// Finally, draw the window
+	wrefresh(win);
+}
+
+static void draw_cpu(WINDOW *win, const computer_t *computer)
+{
+	// Clear the window to prevent leftovers
+	werase(win);
+	// Give it a nice border
+	wborder(win, 0, 0, 0, 0, 0, 0, 0, 0);
+
+	/*
+	 * Here's our layout
+	 * 0123456789
+	 * ----------0
+	 * |EXEC  | |1
+	 * |INCR  |X|2
+	 * |FTCH  | |3
+	 * ----------4
+	 * |IR|-0000|5
+	 * |PC|-0000|6
+	 * |AR|-0000|7
+	 * ----------8
+	 *
+	 *  The first box indicates if we are in execute/increment/fetch with an X
+	 *  fetch is abbreviated to match the others
+	 *
+	 *  The second shows the values in:
+	 *  IR - instruction register
+	 *  PC - program counter
+	 *  AR - A register
+	 *
+	 *  Keep in mind! This will be different if MEMCLL_SIZE changes!
+	 */
+
+	// Draw the horizontal lines
+	// First! We'll overwrite them with the special line characters below
+	for (int x = 1; x < window_maxx(win) - 1; ++x) {
+		mvwaddch(win, 4, x, ACS_HLINE);
+	}
+
+	// Draw some special line characters at (x,y) (7,0),(3,4),(7,4),(3,9)
+	mvwaddch(win, 0, 7, ACS_TTEE);
+	mvwaddch(win, 4, 7, ACS_BTEE);
+	mvwaddch(win, 4, 3, ACS_TTEE);
+	mvwaddch(win, 8, 3, ACS_BTEE);
+
+	// Draw the vertical lines
+	// This could be done in exactly as many lines with a for loop
+	mvwaddch(win, 1, 7, ACS_VLINE);
+	mvwaddch(win, 2, 7, ACS_VLINE);
+	mvwaddch(win, 3, 7, ACS_VLINE);
+	mvwaddch(win, 5, 3, ACS_VLINE);
+	mvwaddch(win, 6, 3, ACS_VLINE);
+	mvwaddch(win, 7, 3, ACS_VLINE);
+
+	// Draw the cycle strings
+	mvwaddstr(win, 1, 1, "EXEC");
+	mvwaddstr(win, 2, 1, "INCR");
+	mvwaddstr(win, 3, 1, "FTCH");
+	// And the indicator
+	mvwaddch(win, computer->step + 1, 8, 'X');
+
+	// Draw the register strings
+	mvwaddstr(win, 5, 1, "IR");
+	mvwaddstr(win, 6, 1, "PC");
+	mvwaddstr(win, 7, 1, "AR");
+
+	// Use a simple buffer for all the registers
+	char regbuf[MEMCLL_SIZE + 1];
+
+	// Then print their values 1 by 1
+	// Using addnstr just to be extra careful, sprintf should handle format problems
+	static_assert(MEMCLL_SIZE == 5,
+		      "Remember to update the format strings here!");
+
+	if (inrange(computer->instruction, MEMVAL_MAX, MEMVAL_MIN)) {
+		sprintf(regbuf, "%5d", computer->instruction);
+		mvwaddnstr(win, 5, 4, regbuf, 5);
+	}
+
+	if (inrange(computer->counter, MEMVAL_MAX, MEMVAL_MIN)) {
+		sprintf(regbuf, "%5d", computer->counter);
+		mvwaddnstr(win, 6, 4, regbuf, 5);
+	}
+
+	if (inrange(computer->reg_a, MEMVAL_MAX, MEMVAL_MIN)) {
+		sprintf(regbuf, "%5d", computer->reg_a);
+		mvwaddnstr(win, 7, 4, regbuf, 5);
+	}
+
+	// Finally, draw the window
+	wrefresh(win);
+}
+
+static void draw_console(WINDOW *win, const computer_t *computer)
+{
+	// Make sure there's nothing left over
+	werase(win);
+	// And give use a nice border around the console
+	wborder(win, 0, 0, 0, 0, 0, 0, 0, 0);
+
+	/*
+	 * 01234567890
+	 * -----------0
+	 * |         |1
+	 * |         |2
+	 * |         |3
+	 * |         |4
+	 * |         |5
+	 * |?        |6
+	 * -----------7
+	 * 5 lines for previous entries, one for the current entry
+	 */
+
+	// Fill out the log
+	for (int i = 0; i < CMDLOG_SIZE; ++i) {
+		// Offset of 1,1 to not overwrite the borders
+		mvwaddstr(win, i + 1, 1, computer->cmdlog[i]);
+	}
+
+	// Now draw our current command, and the prompt
+	mvwaddch(win, CMDLOG_SIZE + 1, 1, '?');
+	mvwaddstr(win, CMDLOG_SIZE + 1, 2, computer->cmd);
+
+	// Finally, draw the window
+	wrefresh(win);
+}
+
+static void null_str(char *str, int size)
+{
+	for (int i = 0; i < size; ++i) {
+		str[i] = '\0';
+	}
+}
+
+int main()
+{
+	// Start the computer
+	computer_t *computer = malloc(sizeof(computer_t));
+
+	// Do some necessary initializiations
+	// Invalid data won't be displayed
+	computer->instruction = MEMVAL_MAX + 1;
+	computer->counter = MEMVAL_MAX + 1;
+	computer->reg_a = MEMVAL_MAX + 1;
+
+	// Always start on step 0
+	computer->step = 0;
+
+	// Fill our memory with invalid data (to prevent display of it)
+	for (int i = 0; i < MEM_SIZE; ++i) {
+		computer->memory[i] = MEMVAL_MAX + 1;
+	}
+
+	// Null out our command log
+	for (int i = 0; i < CMDLOG_SIZE; ++i) {
+		null_str(computer->cmdlog[i], CMD_SIZE);
+	}
+
+	// And out current command
+	null_str(computer->cmd, CMD_SIZE);
+	computer->cmd_size = 0;
+
+	// Startup all the curses jazz
+	WINDOW *main = initscr();
+	keypad(main, true);
+	// Though we don't actually use it
+	start_color();
+	// We don't need to (or want to) display the cursor
+	curs_set(0);
+
+	// Check we've got a big enough window
+	const int term_x = window_maxx(main);
+	const int term_y = window_maxy(main);
+	if (term_x < DISPLAY_COLS || term_y < DISPLAY_ROWS) {
+		endwin();
+		free(computer);
+		fprintf(stderr,
+			"Window is too small (x: %d, y: %d), want (x: %d, y: %d)\n",
+			term_x, term_y, DISPLAY_COLS, DISPLAY_ROWS);
+		return -1;
+	}
+
+	// Start up our various displays
+	WINDOW *memwin = subwin(main, MEMDISP_ROWS, MEMDISP_COLS, 0, 0);
+	WINDOW *cpuwin =
+		subwin(main, CPUDISP_ROWS, CPUDISP_COLS, 0, MEMDISP_COLS + 1);
+	WINDOW *inpwin = subwin(main, CONSOLE_ROWS, CONSOLE_COLS, CPUDISP_ROWS,
+				MEMDISP_COLS);
+
+	wrefresh(main);
+	draw_memory(memwin, computer);
+	draw_cpu(cpuwin, computer);
+	draw_console(inpwin, computer);
+
+	doupdate();
+
+	// Our main loop
+	chtype input = getch();
+	while (input != 'q') {
+		input = getch();
+	}
+
+	delwin(memwin);
+	delwin(cpuwin);
+	delwin(inpwin);
+	delwin(main);
+	endwin();
+	free(computer);
+	return 1;
+}
