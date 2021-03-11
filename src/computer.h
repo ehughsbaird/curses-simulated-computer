@@ -19,7 +19,7 @@ typedef struct {
 
 	// Our log can hold CMDLOG_SIZE commands, and each will be CMD_SIZE characters long (NUL included)
 	// cmdlog[0] is the oldest string, cmdlog[CMDLOG_SIZE - 1] the newest
-	char cmdlog[CMD_SIZE][CMDLOG_SIZE];
+	char cmdlog[CMDLOG_SIZE][CMD_SIZE];
 	char cmd[CMD_SIZE];
 	// Index of the first NUL in cmd
 	// Just so we don't have to both searching for it every time we modify it.
@@ -29,5 +29,7 @@ typedef struct {
 // A pointer to a heap-allocated computer
 // All the data within has been correctly initialized
 computer_t *start_computer();
+
+void execute_command(computer_t *computer);
 
 #endif // COMP_COMPUTER_H

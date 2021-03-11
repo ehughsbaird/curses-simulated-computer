@@ -58,8 +58,26 @@ int main()
 	// We shouldn't be recieving ERR right now, but we might in the future.
 	int input = getch();
 	while (input != 'q') {
+		const int cur_cmd_size = computer->cmd_size;
+		if (input == '\n' || input == KEY_ENTER) {
+			execute_command(computer);
+		} else if (input == KEY_BACKSPACE) {
+			if (cur_cmd_size > 0) {
+				--computer->cmd_size;
+				computer->cmd[computer->cmd_size] = '\0';
+			}
+		} else if (cur_cmd_size < CMD_SIZE - 1) {
+			computer->cmd[cur_cmd_size] = input;
+			++computer->cmd_size;
+		}
+
+		wrefresh(main);
+		draw_memory(memwin, computer);
+		draw_cpu(cpuwin, computer);
+		draw_console(inpwin, computer);
+
+		doupdate();
 		input = getch();
-		mvwaddch(main, term_y - 2, term_x - 2, input);
 	}
 
 	delwin(memwin);

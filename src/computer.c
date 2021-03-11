@@ -1,6 +1,7 @@
 #include "computer.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "utility.h"
 
@@ -33,4 +34,18 @@ computer_t *start_computer()
 	computer->cmd_size = 0;
 
 	return computer;
+}
+
+void execute_command(computer_t *computer)
+{
+	// Shift forward our command history
+	memmove(computer->cmdlog[0], computer->cmdlog[1],
+		sizeof(char) * CMD_SIZE * (CMDLOG_SIZE - 1));
+	// Move our command into the history
+	strcpy(computer->cmdlog[CMDLOG_SIZE - 1], computer->cmd);
+	// TODO: Do something based on the command
+	// Null out our command
+	null_str(computer->cmd, CMD_SIZE);
+	// And set our cursor back to 0
+	computer->cmd_size = 0;
 }
