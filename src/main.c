@@ -11,7 +11,7 @@
 
 bool curses_init(WINDOW *main);
 
-int main()
+int main(void)
 {
 	computer_t *computer = start_computer();
 

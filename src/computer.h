@@ -28,7 +28,7 @@ typedef struct {
 
 // A pointer to a heap-allocated computer
 // All the data within has been correctly initialized
-computer_t *start_computer();
+computer_t *start_computer(void);
 
 void execute_command(computer_t *computer);
 

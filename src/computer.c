@@ -5,7 +5,7 @@
 
 #include "utility.h"
 
-computer_t *start_computer()
+computer_t *start_computer(void)
 {
 	// Start the computer
 	computer_t *computer = malloc(sizeof(computer_t));
