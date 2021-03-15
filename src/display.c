@@ -4,6 +4,107 @@
 
 #include "utility.h"
 
+bool curses_init();
+
+void draw_memory(WINDOW *win, const computer_t *computer);
+void draw_cpu(WINDOW *win, const computer_t *computer);
+void draw_console(WINDOW *win, const computer_t *computer);
+
+// So we don't have to pass these all over
+WINDOW *memory_window = NULL;
+WINDOW *cpu_window = NULL;
+WINDOW *console_window = NULL;
+WINDOW *main_window = NULL;
+
+bool init_windows()
+{
+	// Startup all the curses jazz
+	main_window = initscr();
+
+	if (main_window == NULL) {
+		return false;
+	}
+
+	bool gui_success = curses_init();
+
+	// Start up our various displays
+	if (gui_success) {
+		memory_window =
+			subwin(main_window, MEMDISP_ROWS, MEMDISP_COLS, 0, 0);
+		cpu_window = subwin(main_window, CPUDISP_ROWS, CPUDISP_COLS, 0,
+				    MEMDISP_COLS + 1);
+		console_window = subwin(main_window, CONSOLE_ROWS, CONSOLE_COLS,
+					CPUDISP_ROWS, MEMDISP_COLS);
+
+		redraw_windows();
+	}
+
+	return gui_success;
+}
+
+void redraw_windows()
+{
+	draw_memory(memory_window, computer);
+	draw_cpu(cpu_window, computer);
+	draw_console(console_window, computer);
+
+	doupdate();
+}
+
+void end_windows()
+{
+	if (memory_window != NULL) {
+		delwin(memory_window);
+	}
+
+	if (cpu_window != NULL) {
+		delwin(cpu_window);
+	}
+
+	if (console_window != NULL) {
+		delwin(console_window);
+	}
+
+	if (main_window != NULL) {
+		delwin(main_window);
+	}
+
+	memory_window = NULL;
+	cpu_window = NULL;
+	console_window = NULL;
+	main_window = NULL;
+	endwin();
+}
+
+bool curses_init()
+{
+	// We need to ensure there is input here
+	keypad(main_window, true);
+	// Though we don't actually use it
+	start_color();
+	// We don't need to (or want to) display the cursor
+	curs_set(0);
+	// We don't want to wait for a newline, take input instantly
+	cbreak();
+	// And we'll write the output, curses doesn't need to
+	noecho();
+	// We'll use this later for the computer (not quite here), so let's keep it around
+	// nodelay(main_window, true);
+
+	// Check we've got a big enough window
+	const int term_x = window_maxx(main_window);
+	const int term_y = window_maxy(main_window);
+	if (term_x < DISPLAY_COLS || term_y < DISPLAY_ROWS) {
+		endwin();
+		fprintf(stderr,
+			"Window is too small (x: %d, y: %d), want (x: %d, y: %d)\n",
+			term_x, term_y, DISPLAY_COLS, DISPLAY_ROWS);
+		return false;
+	}
+
+	return true;
+}
+
 void draw_memory(WINDOW *win, const computer_t *computer)
 {
 	// Clean up whatever is left from drawing this previously
@@ -247,14 +348,4 @@ void draw_console(WINDOW *win, const computer_t *computer)
 
 	// Finally, draw the window
 	wrefresh(win);
-}
-
-void draw_windows(WINDOW *memory, WINDOW *cpu, WINDOW *console,
-		  const computer_t *computer)
-{
-	draw_memory(memory, computer);
-	draw_cpu(cpu, computer);
-	draw_console(console, computer);
-
-	doupdate();
 }

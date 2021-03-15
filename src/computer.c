@@ -5,10 +5,13 @@
 
 #include "utility.h"
 
-computer_t *start_computer(void)
+// Global computer pointer
+computer_t *computer;
+
+void start_computer(void)
 {
 	// Start the computer
-	computer_t *computer = malloc(sizeof(computer_t));
+	computer = malloc(sizeof(computer_t));
 
 	// Do some necessary initializiations
 	// Invalid data won't be displayed
@@ -29,11 +32,17 @@ computer_t *start_computer(void)
 		null_str(computer->cmdlog[i], CMD_SIZE);
 	}
 
-	// And out current command
+	// And our current command
 	null_str(computer->cmd, CMD_SIZE);
 	computer->cmd_size = 0;
+}
 
-	return computer;
+void end_computer(void)
+{
+	if (computer != NULL) {
+		free(computer);
+	}
+	computer = NULL;
 }
 
 void execute_command(computer_t *computer)

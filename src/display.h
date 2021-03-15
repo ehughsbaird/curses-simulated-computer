@@ -6,11 +6,8 @@
 
 #include "computer.h"
 
-void draw_memory(WINDOW *win, const computer_t *computer);
-void draw_cpu(WINDOW *win, const computer_t *computer);
-void draw_console(WINDOW *win, const computer_t *computer);
-
-void draw_windows(WINDOW *memory, WINDOW *cpu, WINDOW *console,
-		  const computer_t *computer);
+bool init_windows(void);
+void redraw_windows(void);
+void end_windows(void);
 
 #endif // COMP_DISPLAY_H

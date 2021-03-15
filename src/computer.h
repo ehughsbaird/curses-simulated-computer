@@ -26,9 +26,14 @@ typedef struct {
 	int cmd_size;
 } computer_t;
 
-// A pointer to a heap-allocated computer
-// All the data within has been correctly initialized
-computer_t *start_computer(void);
+// We need to access the computer and it's memory all over the place
+// This makes it easier as we don't need to pass it in everywhere
+extern computer_t *computer;
+
+// Initialize computer and it's data
+void start_computer(void);
+// Free the memory associated with the computer
+void end_computer(void);
 
 void execute_command(computer_t *computer);
 
