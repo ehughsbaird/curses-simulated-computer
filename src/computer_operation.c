@@ -1,5 +1,6 @@
 #include "computer.h"
 
+#include <time.h>
 #include <unistd.h>
 
 #include "display.h"
@@ -21,19 +22,36 @@ void run_program(int startadd)
 		computer->step = 0;
 		computer->instruction = computer->memory[computer->counter];
 		redraw_windows();
-		sleep(1);
+		wait_for_delay();
 
 		// Increment
 		computer->step = 1;
 		++computer->counter;
 		redraw_windows();
-		sleep(1);
+		wait_for_delay();
 
 		// Execute
 		computer->step = 2;
 		functional = execute_instruction_register();
 		redraw_windows();
-		sleep(1);
+		wait_for_delay();
+	}
+}
+
+void wait_for_delay(void)
+{
+       // 500 ms - delay * 50ms
+       // Default of half a second, min of 5% of a second
+	int delay = 500000000 - computer->delay * 50000000;
+       // Negative delay (computer->delay < 0) indicates step-by-step mode
+	if (delay < 0) {
+		while (getch() != ' ') {
+		}
+	} else {
+		struct timespec wait;
+		wait.tv_sec = 0;
+		wait.tv_nsec = delay;
+		nanosleep(&wait, NULL);
 	}
 }
 
@@ -92,6 +110,8 @@ bool execute_instruction_register(void)
 	switch (opcode) {
 	// Halt or skip
 	case 0: {
+		if (address == MEM_SIZE)
+			return false;
 		// halt
 		if (address == 0) {
 			return false;
@@ -106,47 +126,65 @@ bool execute_instruction_register(void)
 	}
 	// Load A register with value at address
 	case 1: {
+		if (address == MEM_SIZE)
+			return false;
 		computer->reg_a = computer->memory[address];
 		modified_reg_a = true;
 		break;
 	}
 	// Store value of A register at address
 	case 2: {
+		if (address == MEM_SIZE)
+			return false;
 		computer->memory[address] = computer->reg_a;
 		modified_reg_a = true;
 		break;
 	}
 	// Add the value at address to A register
 	case 3: {
+		if (address == MEM_SIZE)
+			return false;
 		computer->reg_a += computer->memory[address];
 		modified_reg_a = true;
 		break;
 	}
 	// Subtract the value at address from A register
 	case 4: {
+		if (address == MEM_SIZE)
+			return false;
 		computer->reg_a -= computer->memory[address];
 		modified_reg_a = true;
 		break;
 	}
 	// Multiply the value of the A register by the value at address
 	case 5: {
+		if (address == MEM_SIZE)
+			return false;
 		computer->reg_a *= computer->memory[address];
 		modified_reg_a = true;
 		break;
 	}
 	// Divide the value of the A register by the value at address (integer math, round down)
 	case 6: {
+		if (address == MEM_SIZE)
+			return false;
 		computer->reg_a /= computer->memory[address];
 		modified_reg_a = true;
 		break;
 	}
 	// Input directly to memory at address
 	case 7: {
-		computer->memory[address] = raw_input(address);
+		if (address == MEM_SIZE) {
+			computer->reg_a = raw_input(address);
+		} else {
+			computer->memory[address] = raw_input(address);
+		}
 		break;
 	}
 	// Jump to address
 	case 9: {
+		if (address == MEM_SIZE)
+			return false;
 		computer->counter = address;
 		break;
 	}

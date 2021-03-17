@@ -37,6 +37,8 @@ void start_computer(void)
 	// And our current command
 	null_str(computer->cmd, CMD_SIZE);
 	computer->cmd_size = 0;
+
+	computer->delay = 9;
 }
 
 void end_computer(void)
@@ -132,6 +134,15 @@ bool act_on_command(const char *cmd)
 	if (strncmp(cmd, "LOAD", 4) == 0) {
 		load_memory(address < 0 ? 0 : address);
 	} else if (strcmp(cmd, "RUN") == 0) {
+		run_program(0);
+		clear_cmd();
+	} else if (strncmp(cmd, "RUN", 3) == 0 && isdigit(cmd[3]) &&
+		   isdigit(cmd[4]) && cmd[5] == '\0') {
+		computer->delay = 0;
+		run_program(address);
+	} else if (strncmp(cmd, "RUNSPED", 7) == 0 && isdigit(cmd[7]) &&
+		   cmd[8] == '\0') {
+		computer->delay = cmd[7] - '0';
 		run_program(0);
 	} else if (strcmp(cmd, "QUIT") == 0) {
 		return false;

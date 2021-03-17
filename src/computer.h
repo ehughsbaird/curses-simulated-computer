@@ -2,6 +2,8 @@
 #ifndef COMP_COMPUTER_H
 #define COMP_COMPUTER_H
 
+#define _XOPEN_SOURCE 600
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -27,6 +29,8 @@ typedef struct {
 	// Index of the first NUL in cmd
 	// Just so we don't have to both searching for it every time we modify it.
 	int cmd_size;
+
+	int delay;
 } computer_t;
 
 // We need to access the computer and it's memory all over the place
@@ -78,5 +82,7 @@ void input_query(int address);
 void move_history_fwd(void);
 // Clear the current command
 void clear_cmd(void);
+
+void wait_for_delay(void);
 
 #endif // COMP_COMPUTER_H

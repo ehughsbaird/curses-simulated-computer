@@ -60,7 +60,17 @@ bool assemble_memory(char *memory)
 		return true;
 	} else if (is_raw) {
 		return true;
-	} else if (address < 0 || address >= MEM_SIZE) {
+	} else if (address < 0 || address > MEM_SIZE) {
+		return false;
+	} else if (strncmp(memory, "INP", 3) == 0) {
+		address += 700;
+		sprintf(memory, "%3d", address);
+		return true;
+	} else if (strncmp(memory, "OUT", 3) == 0) {
+		address += 800;
+		sprintf(memory, "%3d", address);
+		return true;
+	} else if (address == MEM_SIZE) {
 		return false;
 	} else if (strncmp(memory, "LDA", 3) == 0) {
 		address += 100;
@@ -84,14 +94,6 @@ bool assemble_memory(char *memory)
 		return true;
 	} else if (strncmp(memory, "DIV", 3) == 0) {
 		address += 600;
-		sprintf(memory, "%3d", address);
-		return true;
-	} else if (strncmp(memory, "INP", 3) == 0) {
-		address += 700;
-		sprintf(memory, "%3d", address);
-		return true;
-	} else if (strncmp(memory, "OUT", 3) == 0) {
-		address += 800;
 		sprintf(memory, "%3d", address);
 		return true;
 	} else if (strncmp(memory, "JMP", 3) == 0) {
