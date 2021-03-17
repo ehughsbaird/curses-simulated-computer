@@ -40,10 +40,10 @@ void run_program(int startadd)
 
 void wait_for_delay(void)
 {
-       // 500 ms - delay * 50ms
-       // Default of half a second, min of 5% of a second
+	// 500 ms - delay * 50ms
+	// Default of half a second, min of 5% of a second
 	int delay = 500000000 - computer->delay * 50000000;
-       // Negative delay (computer->delay < 0) indicates step-by-step mode
+	// Negative delay (computer->delay < 0) indicates step-by-step mode
 	if (delay < 0) {
 		while (getch() != ' ') {
 		}
@@ -83,6 +83,8 @@ static int16_t raw_input(int address)
 
 		int16_t from_user = atoi(computer->cmd + 3);
 		if (inrange(from_user, MEMVAL_MAX, MEMVAL_MIN)) {
+			move_history_fwd();
+			clear_cmd();
 			return from_user;
 		}
 
@@ -178,6 +180,21 @@ bool execute_instruction_register(void)
 			computer->reg_a = raw_input(address);
 		} else {
 			computer->memory[address] = raw_input(address);
+		}
+		break;
+	}
+	// Output to console
+	case 8: {
+		shuffle_output_fwd();
+		if (address == MEM_SIZE) {
+			if (!inrange(computer->reg_a, MEMVAL_MAX, MEMVAL_MIN)) {
+				return false;
+			}
+			sprintf(computer->output[OUTPUT_SIZE - 1], "%d",
+				computer->reg_a);
+		} else {
+			sprintf(computer->output[OUTPUT_SIZE - 1], "%d",
+				computer->memory[address]);
 		}
 		break;
 	}

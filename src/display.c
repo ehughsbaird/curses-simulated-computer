@@ -9,11 +9,13 @@ bool curses_init();
 void draw_memory(WINDOW *win, const computer_t *computer);
 void draw_cpu(WINDOW *win, const computer_t *computer);
 void draw_console(WINDOW *win, const computer_t *computer);
+void draw_output(WINDOW *win, const computer_t *computer);
 
 // So we don't have to pass these all over
 WINDOW *memory_window = NULL;
 WINDOW *cpu_window = NULL;
 WINDOW *console_window = NULL;
+WINDOW *output_window = NULL;
 WINDOW *main_window = NULL;
 
 bool init_windows()
@@ -31,10 +33,13 @@ bool init_windows()
 	if (gui_success) {
 		memory_window =
 			subwin(main_window, MEMDISP_ROWS, MEMDISP_COLS, 0, 0);
-		cpu_window = subwin(main_window, CPUDISP_ROWS, CPUDISP_COLS, 0,
-				    MEMDISP_COLS + 1);
-		console_window = subwin(main_window, CONSOLE_ROWS, CONSOLE_COLS,
-					CPUDISP_ROWS, MEMDISP_COLS);
+		cpu_window = subwin(main_window, CPUDISP_ROWS, CPUDISP_COLS,
+				    CONSOLE_ROWS, MEMDISP_COLS + 1);
+		console_window =
+			subwin(main_window, CONSOLE_ROWS, CONSOLE_COLS,
+			       CPUDISP_ROWS + CONSOLE_ROWS, MEMDISP_COLS);
+		output_window = subwin(main_window, CONSOLE_ROWS, CONSOLE_COLS,
+				       0, MEMDISP_COLS);
 
 		redraw_windows();
 	}
@@ -47,6 +52,7 @@ void redraw_windows()
 	draw_memory(memory_window, computer);
 	draw_cpu(cpu_window, computer);
 	draw_console(console_window, computer);
+	draw_output(output_window, computer);
 
 	doupdate();
 }
@@ -65,6 +71,10 @@ void end_windows()
 		delwin(console_window);
 	}
 
+	if (output_window != NULL) {
+		delwin(output_window);
+	}
+
 	if (main_window != NULL) {
 		delwin(main_window);
 	}
@@ -72,6 +82,7 @@ void end_windows()
 	memory_window = NULL;
 	cpu_window = NULL;
 	console_window = NULL;
+	output_window = NULL;
 	main_window = NULL;
 	endwin();
 }
@@ -366,6 +377,36 @@ void draw_console(WINDOW *win, const computer_t *computer)
 	// Now draw our current command, and the prompt
 	mvwaddch(win, CMDLOG_SIZE + 1, 1, '?');
 	mvwaddstr(win, CMDLOG_SIZE + 1, 2, computer->cmd);
+
+	// Finally, draw the window
+	wrefresh(win);
+}
+
+void draw_output(WINDOW *win, const computer_t *computer)
+{
+	// Make sure there's nothing left over
+	werase(win);
+	// And give use a nice border around the console
+	wborder(win, 0, 0, 0, 0, 0, 0, 0, 0);
+
+	/*
+	 * 01234567890
+	 * -----------0
+	 * |         |1
+	 * |         |2
+	 * |         |3
+	 * |         |4
+	 * |         |5
+	 * |         |6
+	 * -----------7
+	 * 5 lines for previous entries, one for the current entry
+	 */
+
+	// Fill out the log
+	for (int i = 0; i < OUTPUT_SIZE; ++i) {
+		// Offset of 1,1 to not overwrite the borders
+		mvwaddstr(win, i + 1, 1, computer->output[i]);
+	}
 
 	// Finally, draw the window
 	wrefresh(win);

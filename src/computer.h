@@ -30,6 +30,8 @@ typedef struct {
 	// Just so we don't have to both searching for it every time we modify it.
 	int cmd_size;
 
+	char output[OUTPUT_SIZE][CMD_SIZE];
+
 	int delay;
 } computer_t;
 
@@ -82,6 +84,8 @@ void input_query(int address);
 void move_history_fwd(void);
 // Clear the current command
 void clear_cmd(void);
+
+void shuffle_output_fwd(void);
 
 void wait_for_delay(void);
 

@@ -57,11 +57,14 @@
 // 2 separators, 1 prompt line, 5 in the log
 #define CONSOLE_ROWS (3 + CMDLOG_SIZE)
 
+// As many lines as the console, but no extra command
+#define OUTPUT_SIZE (1 + CMDLOG_SIZE)
+
 // The number of columns in composite of all the display windows
 #define DISPLAY_COLS (CONSOLE_COLS + MEMDISP_COLS)
 // The number of rows in the composite of all the display windows
 // We're making the assumption here other options aren't tweaked to make
 // MEMDISP_ROWS Shorter than CONSOLE_ROWS + CPUDISP_ROWS
-#define DISPLAY_ROWS (MEMDISP_ROWS)
+#define DISPLAY_ROWS (2 * CONSOLE_COLS)
 
 #endif // COMP_CONSTANTS_H

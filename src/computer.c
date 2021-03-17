@@ -38,6 +38,11 @@ void start_computer(void)
 	null_str(computer->cmd, CMD_SIZE);
 	computer->cmd_size = 0;
 
+	// Null out our output log
+	for (int i = 0; i < OUTPUT_SIZE; ++i) {
+		null_str(computer->output[i], CMD_SIZE);
+	}
+
 	computer->delay = 9;
 }
 
@@ -98,6 +103,13 @@ void clear_cmd(void)
 	computer->cmd_size = 0;
 }
 
+void shuffle_output_fwd(void)
+{
+	// Shift forward our command history
+	memmove(computer->output[0], computer->output[1],
+		sizeof(char) * CMD_SIZE * (OUTPUT_SIZE - 1));
+}
+
 bool execute_command(void)
 {
 	move_history_fwd();
@@ -132,6 +144,7 @@ bool act_on_command(const char *cmd)
 	int address = get_address_from(cmd);
 
 	if (strncmp(cmd, "LOAD", 4) == 0) {
+		clear_cmd();
 		load_memory(address < 0 ? 0 : address);
 	} else if (strcmp(cmd, "RUN") == 0) {
 		run_program(0);
