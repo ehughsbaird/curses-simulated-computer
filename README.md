@@ -3,6 +3,9 @@
 An emulator of the 1983 Simulated Computer II software.
 Not at feature parity, but mostly functional.
 
+![Example photo of the emulator](https://user-images.githubusercontent.com/44244083/111539331-001a5000-872b-11eb-9b29-b98cb39bf2e0.png)
+
+
 ## Running
 
 At this time, you must compile this program to run it.
