@@ -1,8 +1,10 @@
 #include "computer.h"
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "display.h"
 #include "utility.h"
 
 // Global computer pointer
@@ -45,16 +47,95 @@ void end_computer(void)
 	computer = NULL;
 }
 
-void execute_command(computer_t *computer)
+bool do_input(int backspace_limit)
+{
+	int input = getch();
+	const int cur_cmd_size = computer->cmd_size;
+	if (input == '\n' || input == KEY_ENTER) {
+		return false;
+	} else if (input == KEY_BACKSPACE) {
+		if (cur_cmd_size > backspace_limit) {
+			--computer->cmd_size;
+			computer->cmd[computer->cmd_size] = '\0';
+		}
+	} else if (cur_cmd_size < CMD_SIZE - 1) {
+		computer->cmd[cur_cmd_size] = toupper(input);
+		++computer->cmd_size;
+	}
+
+	return true;
+}
+
+void enter_console(void)
+{
+	// The real main loop
+	bool running = true;
+	while (running) {
+		while (do_input(0)) {
+			redraw_windows();
+		}
+		running = execute_command();
+		redraw_windows();
+	}
+}
+
+void move_history_fwd(void)
 {
 	// Shift forward our command history
 	memmove(computer->cmdlog[0], computer->cmdlog[1],
 		sizeof(char) * CMD_SIZE * (CMDLOG_SIZE - 1));
 	// Move our command into the history
 	strcpy(computer->cmdlog[CMDLOG_SIZE - 1], computer->cmd);
-	// TODO: Do something based on the command
+}
+
+void clear_cmd(void)
+{
 	// Null out our command
 	null_str(computer->cmd, CMD_SIZE);
 	// And set our cursor back to 0
 	computer->cmd_size = 0;
+}
+
+bool execute_command(void)
+{
+	move_history_fwd();
+
+	// Execute the command
+	bool status = act_on_command(computer->cmd);
+
+	clear_cmd();
+
+	return status;
+}
+
+// Returns the 2 decimal digit address at the end of a string
+int get_address_from(const char *str)
+{
+	int address = -1;
+	const char *cursor = str;
+	while (!isdigit(*cursor) && *cursor != '\0') {
+		++cursor;
+		if (isdigit(*cursor) && isdigit(*(cursor + 1)) &&
+		    *(cursor + 2) == '\0') {
+			address = atoi(cursor);
+			break;
+		}
+	}
+
+	return address;
+}
+
+bool act_on_command(const char *cmd)
+{
+	int address = get_address_from(cmd);
+
+	if (strncmp(cmd, "LOAD", 4) == 0) {
+		load_memory(address < 0 ? 0 : address);
+	} else if (strcmp(cmd, "RUN") == 0) {
+		run_program(0);
+	} else if (strcmp(cmd, "QUIT") == 0) {
+		return false;
+	}
+
+	return true;
 }

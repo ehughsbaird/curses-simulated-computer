@@ -2,12 +2,15 @@
 #ifndef COMP_COMPUTER_H
 #define COMP_COMPUTER_H
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "constants.h"
 
 typedef struct {
-	int instruction;
-	int counter;
-	int reg_a;
+	int16_t instruction;
+	int16_t counter;
+	int16_t reg_a;
 
 	// What step of the cycle the CPU is in
 	// 0 fetch instruction from memory at location counter
@@ -15,7 +18,7 @@ typedef struct {
 	// 2 perform the instruction
 	int step;
 
-	int memory[MEM_SIZE];
+	int16_t memory[MEM_SIZE];
 
 	// Our log can hold CMDLOG_SIZE commands, and each will be CMD_SIZE characters long (NUL included)
 	// cmdlog[0] is the oldest string, cmdlog[CMDLOG_SIZE - 1] the newest
@@ -35,6 +38,45 @@ void start_computer(void);
 // Free the memory associated with the computer
 void end_computer(void);
 
-void execute_command(computer_t *computer);
+// Do necessary cleanup in the log and command, the run a command
+bool execute_command(void);
+
+// Transfer control to the console
+void enter_console(void);
+
+// Actually run command cmd
+bool act_on_command(const char *cmd);
+
+// false = input is done, execute
+// true  = continue doing input
+bool do_input(int backspace_limit);
+
+// If memory is a valid assembly instruction:
+// 	translate it in place to it's machine code equivalent
+//
+// Otherwise, return false, and leave memory unchanged
+bool assemble_memory(char *memory);
+
+// Turn machine code back in assembly instructions, in place
+// (If it's a valid instruction)
+void disassemble_memory(char *memory);
+
+// Get a 2 char address from str
+int get_address_from(const char *str);
+
+// Run the program in memory, starting add start_add
+void run_program(int start_add);
+
+// Load input into memory
+void load_memory(int16_t add_start);
+
+// Query for input into computer memory
+void input_query(int address);
+
+// Move the command history forwards, copy the entered command into it
+// (DOES NOT CLEAR THE CURRENT COMMAND)
+void move_history_fwd(void);
+// Clear the current command
+void clear_cmd(void);
 
 #endif // COMP_COMPUTER_H

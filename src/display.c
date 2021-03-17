@@ -187,7 +187,8 @@ void draw_memory(WINDOW *win, const computer_t *computer)
 			// Each address starts MEMBOX_COLS apart from eachother, offset 1 from the edge
 			const int add_coord = MEMBOX_COLS * x + 1;
 			// Each cell starts MEMBOX_COLS apart from eachother, offset MEDADD_SIZE + 1 from the edge
-			const int mem_coord = MEMBOX_COLS * x + MEMADD_SIZE + 1;
+			// The comment above is wrong, for some reason
+			const int mem_coord = MEMBOX_COLS * x + MEMADD_SIZE + 2;
 			const int memory = computer->memory[idx];
 
 			// Make sure sprintf doesn't complain about idx being too large
@@ -200,9 +201,15 @@ void draw_memory(WINDOW *win, const computer_t *computer)
 			const bool memory_fits =
 				inrange(memory, MEMVAL_MAX, MEMVAL_MIN);
 
-			sprintf(add_buf, "%d", idx);
+			sprintf(add_buf, "%02d", idx);
 			if (memory_fits) {
-				sprintf(mem_buff, "%d", memory);
+				char sign = ' ';
+				if (memory < 0) {
+					sign = '-';
+				}
+
+				// We're drawing our own sign character!
+				sprintf(mem_buff, " %c%03d", sign, ABS(memory));
 			}
 
 			// But because sprintf will still complain sometimes, take only the first SIZE + 1 characters from the string.
@@ -278,9 +285,9 @@ void draw_cpu(WINDOW *win, const computer_t *computer)
 	mvwaddch(win, 7, 3, ACS_VLINE);
 
 	// Draw the cycle strings
-	mvwaddstr(win, 1, 1, "EXEC");
+	mvwaddstr(win, 1, 1, "FTCH");
 	mvwaddstr(win, 2, 1, "INCR");
-	mvwaddstr(win, 3, 1, "FTCH");
+	mvwaddstr(win, 3, 1, "EXEC");
 	// And the indicator
 	mvwaddch(win, computer->step + 1, 8, 'X');
 
@@ -290,7 +297,7 @@ void draw_cpu(WINDOW *win, const computer_t *computer)
 	mvwaddstr(win, 7, 1, "AR");
 
 	// Use a simple buffer for all the registers
-	char regbuf[MEMCLL_SIZE + 1];
+	char regbuf[40];
 
 	// Then print their values 1 by 1
 	// Using addnstr just to be extra careful, sprintf should handle format problems
@@ -298,17 +305,31 @@ void draw_cpu(WINDOW *win, const computer_t *computer)
 		      "Remember to update the format strings here!");
 
 	if (inrange(computer->instruction, MEMVAL_MAX, MEMVAL_MIN)) {
-		sprintf(regbuf, "%5d", computer->instruction);
+		char sign = ' ';
+		if (computer->instruction < 0) {
+			sign = '-';
+		}
+		sprintf(regbuf, " %c%03d", sign, computer->instruction);
 		mvwaddnstr(win, 5, 4, regbuf, 5);
 	}
 
 	if (inrange(computer->counter, MEMVAL_MAX, MEMVAL_MIN)) {
-		sprintf(regbuf, "%5d", computer->counter);
+		char sign = ' ';
+		if (computer->counter < 0) {
+			sign = '-';
+		}
+		sprintf(regbuf, " %c%03d", sign, computer->counter);
 		mvwaddnstr(win, 6, 4, regbuf, 5);
 	}
 
 	if (inrange(computer->reg_a, MEMVAL_MAX, MEMVAL_MIN)) {
-		sprintf(regbuf, "%5d", computer->reg_a);
+		char sign = ' ';
+		if (computer->reg_a < 0) {
+			sign = '-';
+		}
+		// We're adding our own sign character!
+		int16_t reg_a = ABS(computer->reg_a);
+		sprintf(regbuf, " %c%03d", sign, reg_a);
 		mvwaddnstr(win, 7, 4, regbuf, 5);
 	}
 

@@ -6,6 +6,8 @@
 
 #include <curses.h>
 
+#define ABS(a) a < 0 ? -a : a
+
 int window_maxx(WINDOW *win);
 int window_maxy(WINDOW *win);
 
