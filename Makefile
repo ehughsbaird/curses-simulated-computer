@@ -90,7 +90,7 @@ $(shell mkdir -p obj)
 
 .PHONY: all
 # Default target - build the program
-all: $(OBJS) format
+all: $(OBJS)
 	$(CC) -o $(BINNAME) $(C_VER) $(WARNINGS) $(C_FLAGS) $(OPT_LEVEL) $(LDFLAGS) $(OBJS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
