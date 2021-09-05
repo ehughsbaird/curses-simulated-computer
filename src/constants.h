@@ -67,4 +67,9 @@
 // MEMDISP_ROWS Shorter than CONSOLE_ROWS + CPUDISP_ROWS
 #define DISPLAY_ROWS (2 * CONSOLE_COLS)
 
+#define INFO_LEN 28
+#define INFO_DEPTH 18
+#define INFO_COLS (INFO_LEN + 2)
+#define INFO_ROWS (INFO_DEPTH + 2)
+
 #endif // COMP_CONSTANTS_H

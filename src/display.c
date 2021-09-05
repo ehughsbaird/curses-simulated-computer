@@ -10,6 +10,7 @@ void draw_memory(WINDOW *win, const computer_t *computer);
 void draw_cpu(WINDOW *win, const computer_t *computer);
 void draw_console(WINDOW *win, const computer_t *computer);
 void draw_output(WINDOW *win, const computer_t *computer);
+void draw_info(WINDOW *win);
 
 // So we don't have to pass these all over
 WINDOW *memory_window = NULL;
@@ -17,6 +18,7 @@ WINDOW *cpu_window = NULL;
 WINDOW *console_window = NULL;
 WINDOW *output_window = NULL;
 WINDOW *main_window = NULL;
+WINDOW *info_window = NULL;
 
 bool init_windows()
 {
@@ -41,6 +43,11 @@ bool init_windows()
 		output_window = subwin(main_window, CONSOLE_ROWS, CONSOLE_COLS,
 				       0, MEMDISP_COLS);
 
+		if (window_maxx(main_window) >= DISPLAY_COLS + INFO_COLS) {
+			info_window = subwin(main_window, INFO_ROWS, INFO_COLS,
+					     0, DISPLAY_COLS);
+		}
+
 		redraw_windows();
 	}
 
@@ -53,6 +60,9 @@ void redraw_windows()
 	draw_cpu(cpu_window, computer);
 	draw_console(console_window, computer);
 	draw_output(output_window, computer);
+	if (info_window) {
+		draw_info(info_window);
+	}
 
 	doupdate();
 }
@@ -79,10 +89,15 @@ void end_windows()
 		delwin(main_window);
 	}
 
+	if (info_window != NULL) {
+		delwin(info_window);
+	}
+
 	memory_window = NULL;
 	cpu_window = NULL;
 	console_window = NULL;
 	output_window = NULL;
+	info_window = NULL;
 	main_window = NULL;
 	endwin();
 }
@@ -114,6 +129,32 @@ bool curses_init()
 	}
 
 	return true;
+}
+
+void draw_info(WINDOW *win)
+{
+	// INFO_LEN x INFO_DEPTH
+	werase(win);
+	wborder(win, 0, 0, 0, 0, 0, 0, 0, 0);
+	mvwaddnstr(win, 1, 1, "> Curses Simulated Computer", INFO_LEN);
+	mvwaddnstr(win, 2, 1, "", INFO_LEN);
+	mvwaddnstr(win, 3, 1, "Assembly manual:", INFO_LEN);
+	mvwaddnstr(win, 4, 1, "1XX: Load AR w/ value at XX", INFO_LEN);
+	mvwaddnstr(win, 5, 1, "2XX: Store AR at XX", INFO_LEN);
+	mvwaddnstr(win, 6, 1, "3XX: Add value at XX to AR", INFO_LEN);
+	mvwaddnstr(win, 7, 1, "4XX: Sub value at XX from AR", INFO_LEN);
+	mvwaddnstr(win, 8, 1, "5XX: Mult AR by value at XX", INFO_LEN);
+	mvwaddnstr(win, 9, 1, "6XX: Div AR by value at XX", INFO_LEN);
+	mvwaddnstr(win, 10, 1, "7XX: Input value at XX 25=AR", INFO_LEN);
+	mvwaddnstr(win, 11, 1, "8XX: Print value at XX 25=AR", INFO_LEN);
+	mvwaddnstr(win, 12, 1, "9XX: Jump to XX", INFO_LEN);
+	mvwaddnstr(win, 13, 1, "", INFO_LEN);
+	mvwaddnstr(win, 14, 1, "0XX: 00 Halt, 0[1-6] jump 1", INFO_LEN);
+	mvwaddnstr(win, 15, 1, "00X: 1 <  0, 2 >  0, 3  = 0", INFO_LEN);
+	mvwaddnstr(win, 16, 1, "00X: 4 <= 0, 5 >= 0, 6 != 0", INFO_LEN);
+	mvwaddnstr(win, 17, 1, "", INFO_LEN);
+	mvwaddnstr(win, 18, 1, "Commands: LOAD, RUN, QUIT", INFO_LEN);
+	wrefresh(win);
 }
 
 void draw_memory(WINDOW *win, const computer_t *computer)
