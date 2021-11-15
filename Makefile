@@ -91,7 +91,7 @@ $(shell mkdir -p obj)
 .PHONY: all
 # Default target - build the program
 all: $(OBJS)
-	$(CC) -o $(BINNAME) $(C_VER) $(WARNINGS) $(C_FLAGS) $(OPT_LEVEL) $(LDFLAGS) $(OBJS)
+	$(CC) -o $(BINNAME) $(C_VER) $(WARNINGS) $(C_FLAGS) $(OBJS) $(OPT_LEVEL) $(LDFLAGS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) -c $< $(WARNINGS) $(C_VER) $(C_FLAGS) $(OPT_LEVEL) -o $@
