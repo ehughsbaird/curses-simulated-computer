@@ -14,19 +14,29 @@ void load_memory(int16_t add_start)
 
 		char buf[CMD_SIZE];
 		strcpy(buf, computer->cmd + 3);
-		if (!assemble_memory(buf)) {
-			if (strcmp((computer->cmd + 3), "END") == 0) {
-				move_history_fwd();
-				clear_cmd();
-				return;
-			}
+
+		bool all_digit = true;
+		char *c;
+
+		struct memcell instr = assemble_memory(buf);
+
+		for(c = buf; c < buf + CMD_SIZE && *c != '\0'; ++c) {
+			all_digit = all_digit && isdigit(*c);
+		}
+		if(all_digit) {
+			load_memory_val(add_start, atoi(buf));
+		} else if (instr.valid) {
+			load_memory_ins(add_start, instr.value);
+		} else if(strcmp((computer->cmd + 3), "END") == 0) {
+			move_history_fwd();
+			clear_cmd();
+			return;
+		} else {
 			clear_cmd();
 			continue;
 		}
-		int input = atoi(buf);
-		computer->memory[add_start] = input;
-		++add_start;
 
+		++add_start;
 		move_history_fwd();
 		clear_cmd();
 	}
@@ -44,120 +54,91 @@ void input_query(int address)
 	}
 }
 
-bool assemble_memory(char *memory)
+struct memcell assemble_memory(char *memory)
 {
+	struct memcell ret;
+	ret.valid = true;
+	ret.instruction = true;
 	int address = get_address_from(memory);
 
-	bool is_raw = true;
-	const char *cursor = memory;
-	while (*cursor != '\0') {
-		is_raw = is_raw && isdigit(*cursor);
-		++cursor;
-	}
-
 	if (strncmp(memory, "STP", 3) == 0) {
-		sprintf(memory, "000");
-		return true;
-	} else if (is_raw) {
-		return true;
+		ret.value = 0;
 	} else if (address < 0 || address > MEM_SIZE) {
-		return false;
+		ret.valid = false;
 	} else if (strncmp(memory, "INP", 3) == 0) {
-		address += 700;
-		sprintf(memory, "%3d", address);
-		return true;
+		ret.value = 700 + address;
 	} else if (strncmp(memory, "OUT", 3) == 0) {
-		address += 800;
-		sprintf(memory, "%3d", address);
-		return true;
+		ret.value = 800 + address;
 	} else if (address == MEM_SIZE) {
-		return false;
+		ret.valid = false;
 	} else if (strncmp(memory, "LDA", 3) == 0) {
-		address += 100;
-		sprintf(memory, "%3d", address);
-		return true;
+		ret.value = 100 + address;
 	} else if (strncmp(memory, "STA", 3) == 0) {
-		address += 200;
-		sprintf(memory, "%3d", address);
-		return true;
+		ret.value = 200 + address;
 	} else if (strncmp(memory, "ADD", 3) == 0) {
-		address += 300;
-		sprintf(memory, "%3d", address);
-		return true;
+		ret.value = 300 + address;
 	} else if (strncmp(memory, "SUB", 3) == 0) {
-		address += 400;
-		sprintf(memory, "%3d", address);
-		return true;
+		ret.value = 400 + address;
 	} else if (strncmp(memory, "MUL", 3) == 0) {
-		address += 500;
-		sprintf(memory, "%3d", address);
-		return true;
+		ret.value = 500 + address;
 	} else if (strncmp(memory, "DIV", 3) == 0) {
-		address += 600;
-		sprintf(memory, "%3d", address);
-		return true;
+		ret.value = 600 + address;
 	} else if (strncmp(memory, "JMP", 3) == 0) {
-		address += 900;
-		sprintf(memory, "%3d", address);
-		return true;
+		ret.value = 900 + address;
 	} else if (strncmp(memory, "SKP", 3) == 0) {
 		if (address > 6) {
-			return false;
+			ret.valid = false;
+		} else {
+			ret.value = address;
 		}
-		sprintf(memory, "%03d", address);
-		return true;
 	}
 
-	return false;
+	return ret;
 }
 
-void disassemble_memory(char *memory)
+void disassemble_memory(char *out, int size, int memory)
 {
-	if (!isdigit(*memory)) {
-		return;
-	}
-
-	int address = atoi((memory + 1));
+	int address = memory % 100;
 	if (address < 0 || address > MEM_SIZE) {
 		return;
 	}
 
-	int opcode = *memory - '0';
+	int opcode = memory / 100;
 
 	switch (opcode) {
 	case 0:
 		if (address != 0) {
-			sprintf(memory, "STP");
+			snprintf(out, size, "STP");
 		} else {
-			sprintf(memory, "SKP%02d", address);
+			snprintf(out, size, "SKP%02d", address);
 		}
 		break;
 	case 1:
-		sprintf(memory, "LDA%02d", address);
+		snprintf(out, size, "LDA%02d", address);
 		break;
 	case 2:
-		sprintf(memory, "STA%02d", address);
+		snprintf(out, size, "STA%02d", address);
 		break;
 	case 3:
-		sprintf(memory, "ADD%02d", address);
+		snprintf(out, size, "ADD%02d", address);
 		break;
 	case 4:
-		sprintf(memory, "SUB%02d", address);
+		snprintf(out, size, "SUB%02d", address);
 		break;
 	case 5:
-		sprintf(memory, "MUL%02d", address);
+		snprintf(out, size, "MUL%02d", address);
 		break;
 	case 6:
-		sprintf(memory, "DIV%02d", address);
+		snprintf(out, size, "DIV%02d", address);
 		break;
 	case 7:
-		sprintf(memory, "INP%02d", address);
+		snprintf(out, size, "INP%02d", address);
 		break;
 	case 8:
-		sprintf(memory, "OUT%02d", address);
+		snprintf(out, size, "OUT%02d", address);
 		break;
 	case 9:
-		sprintf(memory, "JMP%02d", address);
+		snprintf(out, size, "JMP%02d", address);
 		break;
 	default:
 		break;

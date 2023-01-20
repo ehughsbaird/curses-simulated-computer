@@ -139,19 +139,19 @@ void draw_info(WINDOW *win)
 	mvwaddnstr(win, 1, 1, "> Curses Simulated Computer", INFO_LEN);
 	mvwaddnstr(win, 2, 1, "", INFO_LEN);
 	mvwaddnstr(win, 3, 1, "Assembly manual:", INFO_LEN);
-	mvwaddnstr(win, 4, 1, "1XX: Load AR w/ value at XX", INFO_LEN);
-	mvwaddnstr(win, 5, 1, "2XX: Store AR at XX", INFO_LEN);
-	mvwaddnstr(win, 6, 1, "3XX: Add value at XX to AR", INFO_LEN);
-	mvwaddnstr(win, 7, 1, "4XX: Sub value at XX from AR", INFO_LEN);
-	mvwaddnstr(win, 8, 1, "5XX: Mult AR by value at XX", INFO_LEN);
-	mvwaddnstr(win, 9, 1, "6XX: Div AR by value at XX", INFO_LEN);
-	mvwaddnstr(win, 10, 1, "7XX: Input value at XX 24=AR", INFO_LEN);
-	mvwaddnstr(win, 11, 1, "8XX: Print value at XX 24=AR", INFO_LEN);
-	mvwaddnstr(win, 12, 1, "9XX: Jump to XX", INFO_LEN);
-	mvwaddnstr(win, 13, 1, "", INFO_LEN);
-	mvwaddnstr(win, 14, 1, "0XX: 00 Halt, 0[1-6] jump 1", INFO_LEN);
-	mvwaddnstr(win, 15, 1, "00X: 1 <  0, 2 >  0, 3  = 0", INFO_LEN);
-	mvwaddnstr(win, 16, 1, "00X: 4 <= 0, 5 >= 0, 6 != 0", INFO_LEN);
+	mvwaddnstr(win, 4, 1, "LDAXX: AR = value at XX", INFO_LEN);
+	mvwaddnstr(win, 5, 1, "STAXX: value at XX = AR", INFO_LEN);
+	mvwaddnstr(win, 6, 1, "ADDXX: AR = AR + value at XX", INFO_LEN);
+	mvwaddnstr(win, 7, 1, "SUBXX: AR = AR - value at XX", INFO_LEN);
+	mvwaddnstr(win, 8, 1, "MULXX: AR = AR * value at XX", INFO_LEN);
+	mvwaddnstr(win, 9, 1, "DIVXX: AR = AR / value at XX", INFO_LEN);
+	mvwaddnstr(win, 10, 1, "INPXX: Input value at XX", INFO_LEN);
+	mvwaddnstr(win, 11, 1, "OUTXX: Print value at XX", INFO_LEN);
+	mvwaddnstr(win, 12, 1, "JMPXX: Jump to XX", INFO_LEN);
+	mvwaddnstr(win, 13, 1, "For INP & OUT, XX=24 for AR", INFO_LEN);
+	mvwaddnstr(win, 14, 1, "SKPX: 00 Halt, 0[1-6] jump 1", INFO_LEN);
+	mvwaddnstr(win, 15, 1, "0X: 1 <  0, 2 >  0, 3  = 0", INFO_LEN);
+	mvwaddnstr(win, 16, 1, "0X: 4 <= 0, 5 >= 0, 6 != 0", INFO_LEN);
 	mvwaddnstr(win, 17, 1, "", INFO_LEN);
 	mvwaddnstr(win, 18, 1, "Commands: LOAD, RUN, QUIT", INFO_LEN);
 	wrefresh(win);
@@ -241,7 +241,7 @@ void draw_memory(WINDOW *win, const computer_t *computer)
 			// Each cell starts MEMBOX_COLS apart from eachother, offset MEDADD_SIZE + 1 from the edge
 			// The comment above is wrong, for some reason
 			const int mem_coord = MEMBOX_COLS * x + MEMADD_SIZE + 2;
-			const int memory = computer->memory[idx];
+			const struct memcell memory = computer->memory[idx];
 
 			// Make sure sprintf doesn't complain about idx being too large
 			// (If its bigger, it won't fit in add_buf)
@@ -250,18 +250,21 @@ void draw_memory(WINDOW *win, const computer_t *computer)
 			}
 
 			// This is a valid value for memory, and it will format nicely
-			const bool memory_fits =
-				inrange(memory, MEMVAL_MAX, MEMVAL_MIN);
+			const bool memory_valid = memory.valid;
+			const bool decode_memory = memory.instruction;
 
 			sprintf(add_buf, "%02d", idx);
-			if (memory_fits) {
+			if (memory_valid && !decode_memory) {
 				char sign = ' ';
-				if (memory < 0) {
+				if (memory.value < 0) {
 					sign = '-';
 				}
 
 				// We're drawing our own sign character!
-				sprintf(mem_buff, " %c%03d", sign, ABS(memory));
+				sprintf(mem_buff, " %c%03d", sign, ABS(memory.value));
+			}
+			if (decode_memory) {
+				disassemble_memory(mem_buff, MEMCLL_SIZE + 1, memory.value);
 			}
 
 			// But because sprintf will still complain sometimes, take only the first SIZE + 1 characters from the string.
@@ -273,7 +276,7 @@ void draw_memory(WINDOW *win, const computer_t *computer)
 			// I'm just being careful
 			mvwaddnstr(win, y, add_coord, add_buf, MEMADD_SIZE);
 			// Values > MEMVAL_MAX or < MEMVAL_MIN are invalid
-			if (memory_fits) {
+			if (memory_valid) {
 				mvwaddnstr(win, y, mem_coord, mem_buff,
 					   MEMCLL_SIZE);
 			}
@@ -357,11 +360,7 @@ void draw_cpu(WINDOW *win, const computer_t *computer)
 		      "Remember to update the format strings here!");
 
 	if (inrange(computer->instruction, MEMVAL_MAX, MEMVAL_MIN)) {
-		char sign = ' ';
-		if (computer->instruction < 0) {
-			sign = '-';
-		}
-		sprintf(regbuf, " %c%03d", sign, computer->instruction);
+		disassemble_memory(regbuf, 6, computer->instruction);
 		mvwaddnstr(win, 5, 4, regbuf, 5);
 	}
 

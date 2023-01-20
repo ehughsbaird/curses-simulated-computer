@@ -9,6 +9,20 @@
 
 #include "constants.h"
 
+struct memcell {
+	// Interpret these first two as usigned so they hold 0, 1 not 0, -1
+	// Valid bit encodes whether this piece of memory has been set
+	uint16_t valid : 1;
+	// Controls display of this piece of memory, whether or not to decode it as an instruction
+	uint16_t instruction : 1;
+	// Empty space, reserve for future use
+	int16_t padding : 3;
+	// Memory can hold values from -999 to 999
+	int16_t value : 11;
+	_Static_assert(MEMVAL_MIN == -999 && MEMVAL_MAX == 999, "Adjust memcell sizing if MEMVAL size changes!");
+};
+_Static_assert(sizeof(struct memcell) == sizeof(int16_t), "Size check");
+
 typedef struct {
 	int16_t instruction;
 	int16_t counter;
@@ -20,7 +34,7 @@ typedef struct {
 	// 2 perform the instruction
 	int step;
 
-	int16_t memory[MEM_SIZE];
+	struct memcell memory[MEM_SIZE];
 
 	// Our log can hold CMDLOG_SIZE commands, and each will be CMD_SIZE characters long (NUL included)
 	// cmdlog[0] is the oldest string, cmdlog[CMDLOG_SIZE - 1] the newest
@@ -53,19 +67,31 @@ void enter_console(void);
 // Actually run command cmd
 bool act_on_command(const char *cmd);
 
+// Load a value between MEMVAL_MIN and MEMVAL_MAX into memory
+void load_memory_val(int addr, int val);
+
+// Load an assembled instruction into memory
+void load_memory_ins(int addr, int ins);
+
+// Read a memory cell, including meta-data
+struct memcell read_memory(int addr);
+
+// Read the value in a memory cell
+int16_t read_memory_val(int addr);
+
 // false = input is done, execute
 // true  = continue doing input
 bool do_input(int backspace_limit);
 
 // If memory is a valid assembly instruction:
-// 	translate it in place to it's machine code equivalent
+// 	create a corresponding memcell with valid data set
 //
-// Otherwise, return false, and leave memory unchanged
-bool assemble_memory(char *memory);
+// Otherwise, return a memcell without valid data set
+struct memcell assemble_memory(char *memory);
 
 // Turn machine code back in assembly instructions, in place
 // (If it's a valid instruction)
-void disassemble_memory(char *memory);
+void disassemble_memory(char *out, int size, int memory);
 
 // Get a 2 char address from str
 int get_address_from(const char *str);

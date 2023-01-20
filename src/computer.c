@@ -26,7 +26,7 @@ void start_computer(void)
 
 	// Fill our memory with invalid data (to prevent display of it)
 	for (int i = 0; i < MEM_SIZE; ++i) {
-		computer->memory[i] = MEMVAL_MAX + 1;
+		computer->memory[i].valid = false;
 	}
 
 	// Null out our command log
@@ -52,6 +52,32 @@ void end_computer(void)
 		free(computer);
 	}
 	computer = NULL;
+}
+
+void load_memory_val(int addr, int val)
+{
+	computer->memory[addr].valid = 1;
+	computer->memory[addr].instruction = false;
+	computer->memory[addr].value = val;
+}
+
+void load_memory_ins(int addr, int ins)
+{
+	computer->memory[addr].valid = 1;
+	computer->memory[addr].instruction = 1;
+	computer->memory[addr].value = ins;
+}
+
+struct memcell read_memory(int addr)
+{
+	return computer->memory[addr];
+}
+
+int16_t read_memory_val(int addr)
+{
+	if(!computer->memory[addr].valid)
+		return 0;
+	return computer->memory[addr].value;
 }
 
 bool do_input(int backspace_limit)

@@ -20,7 +20,7 @@ void run_program(int startadd)
 			break;
 		}
 		computer->step = 0;
-		computer->instruction = computer->memory[computer->counter];
+		computer->instruction = read_memory_val(computer->counter);
 		redraw_windows();
 		wait_for_delay();
 
@@ -130,7 +130,7 @@ bool execute_instruction_register(void)
 	case 1: {
 		if (address == MEM_SIZE)
 			return false;
-		computer->reg_a = computer->memory[address];
+		computer->reg_a = read_memory_val(address);
 		modified_reg_a = true;
 		break;
 	}
@@ -138,7 +138,7 @@ bool execute_instruction_register(void)
 	case 2: {
 		if (address == MEM_SIZE)
 			return false;
-		computer->memory[address] = computer->reg_a;
+		load_memory_val(address, computer->reg_a);
 		modified_reg_a = true;
 		break;
 	}
@@ -146,7 +146,7 @@ bool execute_instruction_register(void)
 	case 3: {
 		if (address == MEM_SIZE)
 			return false;
-		computer->reg_a += computer->memory[address];
+		computer->reg_a += read_memory_val(address);
 		modified_reg_a = true;
 		break;
 	}
@@ -154,7 +154,7 @@ bool execute_instruction_register(void)
 	case 4: {
 		if (address == MEM_SIZE)
 			return false;
-		computer->reg_a -= computer->memory[address];
+		computer->reg_a -= read_memory_val(address);
 		modified_reg_a = true;
 		break;
 	}
@@ -162,7 +162,7 @@ bool execute_instruction_register(void)
 	case 5: {
 		if (address == MEM_SIZE)
 			return false;
-		computer->reg_a *= computer->memory[address];
+		computer->reg_a *= read_memory_val(address);
 		modified_reg_a = true;
 		break;
 	}
@@ -170,7 +170,7 @@ bool execute_instruction_register(void)
 	case 6: {
 		if (address == MEM_SIZE)
 			return false;
-		computer->reg_a /= computer->memory[address];
+		computer->reg_a /= read_memory_val(address);
 		modified_reg_a = true;
 		break;
 	}
@@ -179,7 +179,7 @@ bool execute_instruction_register(void)
 		if (address == MEM_SIZE) {
 			computer->reg_a = raw_input(address);
 		} else {
-			computer->memory[address] = raw_input(address);
+			load_memory_val(address, raw_input(address));
 		}
 		break;
 	}
@@ -194,7 +194,7 @@ bool execute_instruction_register(void)
 				computer->reg_a);
 		} else {
 			sprintf(computer->output[OUTPUT_SIZE - 1], "%d",
-				computer->memory[address]);
+				read_memory_val(address));
 		}
 		break;
 	}
