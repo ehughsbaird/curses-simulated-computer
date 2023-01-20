@@ -3,7 +3,7 @@
 An emulator of the 1983 Simulated Computer II software.
 Not at feature parity, but mostly functional.
 
-![Example photo of the emulator](https://user-images.githubusercontent.com/44244083/111539331-001a5000-872b-11eb-9b29-b98cb39bf2e0.png)
+![Example photo of the emulator computing fibonacci numbers](https://user-images.githubusercontent.com/44244083/213610394-5988f007-7b62-4400-b889-f2fbb864826a.png)
 
 
 ## Running

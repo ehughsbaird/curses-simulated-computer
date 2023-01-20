@@ -145,8 +145,8 @@ void draw_info(WINDOW *win)
 	mvwaddnstr(win, 7, 1, "4XX: Sub value at XX from AR", INFO_LEN);
 	mvwaddnstr(win, 8, 1, "5XX: Mult AR by value at XX", INFO_LEN);
 	mvwaddnstr(win, 9, 1, "6XX: Div AR by value at XX", INFO_LEN);
-	mvwaddnstr(win, 10, 1, "7XX: Input value at XX 25=AR", INFO_LEN);
-	mvwaddnstr(win, 11, 1, "8XX: Print value at XX 25=AR", INFO_LEN);
+	mvwaddnstr(win, 10, 1, "7XX: Input value at XX 24=AR", INFO_LEN);
+	mvwaddnstr(win, 11, 1, "8XX: Print value at XX 24=AR", INFO_LEN);
 	mvwaddnstr(win, 12, 1, "9XX: Jump to XX", INFO_LEN);
 	mvwaddnstr(win, 13, 1, "", INFO_LEN);
 	mvwaddnstr(win, 14, 1, "0XX: 00 Halt, 0[1-6] jump 1", INFO_LEN);
